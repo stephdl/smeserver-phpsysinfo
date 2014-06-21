@@ -15,7 +15,7 @@ Source: %{name}-%{version}.tar.gz
 URL: http://phpsysinfo.sourceforge.net
 BuildRoot: /var/tmp/%{name}-%{version}-%{release}-buildroot
 BuildArchitectures: noarch
-Requires: smeserver-release => 9.0
+Requires: smeserver-release >= 8.0
 BuildRequires: e-smith-devtools 
 AutoReqProv: no
 
@@ -25,8 +25,9 @@ Access with admin login credentials via https://yourdomain/phpsysinfo
 
 %changelog
 * Sat Jun 21 2014 stephane de Labrusse <stephdl@de-labrusse.fr> 3.1.13-1.sme
-- Initial release to sme9
+- release to sme8
 - upgrade of phpsysinfo to 3.1.13 https://github.com/phpsysinfo/phpsysinfo/releases/tag/v3.1.13
+- added a menu in the administration panel of server-manager
 
 * Mon Apr 21 2008 Shad L. Lords <slords@mail.com>
 - Prep for import into buildsys
