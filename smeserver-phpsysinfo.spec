@@ -99,8 +99,9 @@ Access with admin login credentials via https://yourdomain/phpsysinfo
 %defattr(-,root,root)
 
 %pre 
-/bin/cp /opt/phpsysinfo/phpsysinfo.ini /opt/phpsysinfo/phpsysinfo.ini-$(date +"%H:%M-%b-%d-%Y")
-
+if  [[ -f /opt/phpsysinfo/phpsysinfo.ini ]]; then
+    /bin/cp /opt/phpsysinfo/phpsysinfo.ini /opt/phpsysinfo/phpsysinfo.ini-$(date +"%H:%M-%b-%d-%Y")
+fi
 %post
 if ! [[ -f /opt/phpsysinfo/phpsysinfo.ini ]]; then
      cp /opt/phpsysinfo/phpsysinfo.ini.new /opt/phpsysinfo/phpsysinfo.ini
