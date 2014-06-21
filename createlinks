@@ -3,4 +3,4 @@
 use esmith::Build::CreateLinks qw(:all);
 
 # Links for the panel
-panel_link("PhpSysInfo", "manager");
+panel_link("phpsysinfo", "manager");
