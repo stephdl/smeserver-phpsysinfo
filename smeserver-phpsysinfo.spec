@@ -86,6 +86,10 @@ Access with admin login credentials via https://yourdomain/phpsysinfo
 %prep
 %setup
 
+%build
+perl createlinks
+
+
 %install
 /bin/rm -rf $RPM_BUILD_ROOT
 (cd root   ; /usr/bin/find . -depth -print | /bin/cpio -dump $RPM_BUILD_ROOT)
