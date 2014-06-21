@@ -98,3 +98,10 @@ Access with admin login credentials via https://yourdomain/phpsysinfo
 %files -f %{name}-%{version}-filelist
 %defattr(-,root,root)
 
+%pre 
+/bin/cp /opt/phpsysinfo/phpsysinfo.ini /opt/phpsysinfo/phpsysinfo.ini-$(date +"%H:%M-%b-%d-%Y")
+
+%post
+if ! [[ -f /opt/phpsysinfo/phpsysinfo.ini ]]; then
+     cp /opt/phpsysinfo/phpsysinfo.ini.new /opt/phpsysinfo/phpsysinfo.ini
+fi
