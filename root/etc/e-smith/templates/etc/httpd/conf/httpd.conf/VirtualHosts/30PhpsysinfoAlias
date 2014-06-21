@@ -1,0 +1,8 @@
+{
+    $haveSSL = (exists ${modSSL}{status} and ${modSSL}{status} eq "enabled") ?  'yes' : 'no';
+
+    if (($port eq "80") && ($haveSSL eq 'yes'))
+        {
+            $OUT .= "    RewriteRule ^/phpsysinfo(/.*|\$)    https://%{HTTP_HOST}/phpsysinfo\$1 [L,R]\n";
+        }
+}

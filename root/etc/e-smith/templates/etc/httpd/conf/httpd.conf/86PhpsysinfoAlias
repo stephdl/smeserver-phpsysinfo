@@ -1,0 +1,30 @@
+
+# phpsysinfo
+Alias /phpsysinfo /opt/phpsysinfo
+<Directory /opt/phpsysinfo>
+    SSLRequireSSL
+    Options -Indexes
+    AllowOverride None
+    order deny,allow
+    deny from all
+{
+my $access = ($phpsysinfo{'access'} || 'private'); 
+if ("$access" eq "private")
+    {
+    $OUT .= "    allow from $localAccess $externalSSLAccess";
+    }
+    elsif ("$access" eq "public")
+    {
+    $OUT .= "    allow from all";
+    }
+}
+    AuthName "phpSysInfo"
+    AuthType Basic
+    AuthExternal pwauth
+    require user admin
+    Satisfy all
+    AddType application/x-httpd-php .php .php3
+    php_flag  magic_quotes_gpc  on
+    php_flag  track_vars        on
+</Directory>
+
