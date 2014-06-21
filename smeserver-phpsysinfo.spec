@@ -5,7 +5,7 @@
 Summary: phpSysInfo for SME Server
 %define name smeserver-phpsysinfo
 Name: %{name}
-%define version 2.5.4
+%define version 3.1.13
 %define release 1
 Version: %{version}
 Release: %{release}%{?dist}
@@ -15,8 +15,8 @@ Source: %{name}-%{version}.tar.gz
 URL: http://phpsysinfo.sourceforge.net
 BuildRoot: /var/tmp/%{name}-%{version}-%{release}-buildroot
 BuildArchitectures: noarch
-Requires: smeserver-release => 7.0
-BuildRequires: e-smith-devtools >= 1.13.1-03
+Requires: smeserver-release => 9.0
+BuildRequires: e-smith-devtools 
 AutoReqProv: no
 
 %description
@@ -24,6 +24,10 @@ AutoReqProv: no
 Access with admin login credentials via https://yourdomain/phpsysinfo
 
 %changelog
+* Sat Jun 21 2014 stephane de Labrusse <stephdl@de-labrusse.fr> 3.1.13-1.sme
+- Initial release to sme9
+- upgrade of phpsysinfo to 3.1.13 https://github.com/phpsysinfo/phpsysinfo/releases/tag/v3.1.13
+
 * Mon Apr 21 2008 Shad L. Lords <slords@mail.com>
 - Prep for import into buildsys
 - Clean up spec

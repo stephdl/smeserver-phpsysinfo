@@ -1,112 +1,237 @@
-<?php 
+<?php
+if (!defined('PSI_CONFIG_FILE')) {
+    /**
+     * phpSysInfo version
+     */
+    define('PSI_VERSION','3.1.13');
+    /**
+     * phpSysInfo configuration
+     */
+    define('PSI_CONFIG_FILE', APP_ROOT.'/phpsysinfo.ini');
 
-// phpSysInfo - A PHP System Information Script
-// http://phpsysinfo.sourceforge.net/
+    define('ARRAY_EXP', '/^return array \([^;]*\);$/'); //array expression search
 
-// This program is free software; you can redistribute it and/or
-// modify it under the terms of the GNU General Public License
-// as published by the Free Software Foundation; either version 2
-// of the License, or (at your option) any later version.
+    if (!is_readable(PSI_CONFIG_FILE) || !($config = @parse_ini_file(PSI_CONFIG_FILE, true))) {
+        $tpl = new Template("/templates/html/error_config.html");
+        echo $tpl->fetch();
+        die();
+    } else {
+        foreach ($config as $name=>$group) {
+            if (strtoupper($name)=="MAIN") {
+                $name_prefix='PSI_';
+            } else {
+                $name_prefix='PSI_PLUGIN_'.strtoupper($name).'_';
+            }
+            foreach ($group as $param=>$value) {
+                if (($value==="") || ($value==="0")) {
+                    define($name_prefix.strtoupper($param), false);
+                } elseif ($value==="1") {
+                    define($name_prefix.strtoupper($param), true);
+                } else {
+                    if (strstr($value, ',')) {
+                        define($name_prefix.strtoupper($param), 'return '.var_export(preg_split('/\s*,\s*/', $value, -1, PREG_SPLIT_NO_EMPTY),1).';');
+                    } else {
+                        define($name_prefix.strtoupper($param), $value);
+                    }
+                }
+            }
+        }
+    }
 
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+    /* default error handler */
+    if (function_exists('errorHandlerPsi')) {
+        restore_error_handler();
+    }
 
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+    /* fatal errors only */
+    $old_err_rep = error_reporting();
+    error_reporting(E_ERROR);
 
-// $Id: config.php.new,v 1.23 2007/02/18 19:02:59 bigmichi1 Exp $
+    /* get git revision */
+    if (file_exists(APP_ROOT.'/.git/HEAD')) {
+        $contents = @file_get_contents(APP_ROOT.'/.git/HEAD');
+        if ($contents && preg_match("/^ref:\s+(.*)\/([^\/\s]*)/m", $contents, $matches)) {
+            $contents = @file_get_contents(APP_ROOT.'/.git/'.$matches[1]."/".$matches[2]);
+            if ($contents && preg_match("/^([^\s]*)/m", $contents, $revision)) {
+                define('PSI_VERSION_STRING', PSI_VERSION ."-".$matches[2]."-".substr($revision[1],0,7));
+            } else {
+                define('PSI_VERSION_STRING', PSI_VERSION ."-".$matches[2]);
+            }
+        }
+    }
+    /* get svn revision */
+    if (!defined('PSI_VERSION_STRING') && file_exists(APP_ROOT.'/.svn/entries')) {
+        $contents = @file_get_contents(APP_ROOT.'/.svn/entries');
+        if ($contents && preg_match("/dir\n(.+)/", $contents, $matches)) {
+            define('PSI_VERSION_STRING', PSI_VERSION."-r".$matches[1]);
+        } else {
+            define('PSI_VERSION_STRING', PSI_VERSION);
+        }
+    }
+    if (!defined('PSI_VERSION_STRING')) {
+        define('PSI_VERSION_STRING', PSI_VERSION);
+    }
 
-// if $webpath set to an value it will be possible to include phpsysinfo with a simple include() statement in other scripts
-// but the structure in the phpsysinfo directory can't be changed
-// $webpath specifies the absolute path when you browse to the phpsysinfo page
-// e.g.: your domain  www.yourdomain.com
-//       you put the phpsysinfo directory at /phpsysinfo in the webroot
-//       then normally you browse there with www.yourdomain.com/phpsysinfo
-//       now you want to include the index.php from phpsysinfo in a script, locatet at /
-//       then you need to set $webpath to /phpsysinfo/
-// if you put the phpsysinfo folder at /tools/phpsysinfo $webpath will be /tools/phpsysinfo/
-// you don't need to change it, if you don't include it in other pages
-// so default will be fine for everyone
-$webpath = "";
+    if (!defined('PSI_OS')) { //if not overloaded in phpsysinfo.ini
+        /* get Linux code page */
+        if (PHP_OS == 'Linux') {
+            if (file_exists('/etc/sysconfig/i18n')) {
+                $contents = @file_get_contents('/etc/sysconfig/i18n');
+            } elseif (file_exists('/etc/default/locale')) {
+                $contents = @file_get_contents('/etc/default/locale');
+            } elseif (file_exists('/etc/locale.conf')) {
+                $contents = @file_get_contents('/etc/locale.conf');
+            } elseif (file_exists('/etc/sysconfig/language')) {
+                $contents = @file_get_contents('/etc/sysconfig/language');
+            } elseif (file_exists('/etc/profile.d/lang.sh')) {
+                $contents = @file_get_contents('/etc/profile.d/lang.sh');
+            } else {
+                $contents = false;
+                if (file_exists('/system/build.prop')) { //Android
+                    define('PSI_OS', 'Android');
+                    if (!defined('PSI_MODE_POPEN')) { //if not overloaded in phpsysinfo.ini
+                        if (!function_exists("proc_open")) { //proc_open function test by executing 'pwd' command
+                            define('PSI_MODE_POPEN', true); //use popen() function - no stderr error handling
+                        } else {
+                            $out = '';
+                            $err = '';
+                            $pipes = array();
+                            $descriptorspec = array(0=>array("pipe", "r"), 1=>array("pipe", "w"), 2=>array("pipe", "w"));
+                            $process = proc_open("pwd 2>/dev/null ", $descriptorspec, $pipes);
+                            if (!is_resource($process)) {
+                                define('PSI_MODE_POPEN', true);
+                            } else {
+                                $w = null;
+                                $e = null;
 
-// define the default lng and template here
-$default_lng='en';
-$default_template='classic';
+                                while (!(feof($pipes[1]) || feof($pipes[2]))) {
+                                    $read = array($pipes[1], $pipes[2]);
 
-// hide language and template picklist
-// false = display picklist
-// true = do not display picklist
-$hide_picklist = false;
+                                    $n = stream_select($read, $w, $e, 5);
 
-// display the virtual host name and address
-// default is canonical host name and address
-$show_vhostname = false;
+                                    if (($n === FALSE) || ($n === 0)) {
+                                        break;
+                                    }
 
-// define the motherboard monitoring program here
-// we support four programs so far
-// 1. lmsensors  http://www.lm-sensors.org/
-// 2. healthd    http://healthd.thehousleys.net/
-// 3. hwsensors  http://www.openbsd.org/
-// 4. mbmon      http://www.nt.phys.kyushu-u.ac.jp/shimizu/download/download.html
-// 5. mbm5       http://mbm.livewiredev.com/
+                                    foreach ($read as $r) {
+                                        if ($r == $pipes[1]) {
+                                            $out .= fread($r, 4096);
+                                        }
+                                        if ($r == $pipes[2]) {
+                                            $err .= fread($r, 4096);
+                                        }
+                                    }
+                                }
 
-// $sensor_program = "lmsensors";
-// $sensor_program = "healthd";
-// $sensor_program = "hwsensors";
-// $sensor_program = "mbmon";
-// $sensor_program = "mbm5";
-$sensor_program = "";
+                                if (is_null($out) || (trim($out) == "") || (substr(trim($out),0 ,1) != "/")) {
+                                    define('PSI_MODE_POPEN', true);
+                                }
+                                fclose($pipes[0]);
+                                fclose($pipes[1]);
+                                fclose($pipes[2]);
+                                // It is important that you close any pipes before calling
+                                // proc_close in order to avoid a deadlock
+                                proc_close($process);
+                            }
+                        }
+                    }
+                }
+            }
+            if (!(defined('PSI_SYSTEM_CODEPAGE') && defined('PSI_SYSTEM_LANG')) //also if both not overloaded in phpsysinfo.ini
+               && $contents && ( preg_match('/^(LANG="?[^"\n]*"?)/m', $contents, $matches)
+               || preg_match('/^RC_(LANG="?[^"\n]*"?)/m', $contents, $matches)
+               || preg_match('/^export (LANG="?[^"\n]*"?)/m', $contents, $matches))) {
+                if (!defined('PSI_SYSTEM_CODEPAGE') && @exec($matches[1].' locale -k LC_CTYPE 2>/dev/null', $lines)) { //if not overloaded in phpsysinfo.ini
+                    foreach ($lines as $line) {
+                        if (preg_match('/^charmap="?([^"]*)/', $line, $matches2)) {
+                            define('PSI_SYSTEM_CODEPAGE', $matches2[1]);
+                            break;
+                        }
+                    }
+                }
+                if (!defined('PSI_SYSTEM_LANG') && @exec($matches[1].' locale 2>/dev/null', $lines)) { //also if not overloaded in phpsysinfo.ini
+                    foreach ($lines as $line) {
+                        if (preg_match('/^LC_MESSAGES="?([^\."@]*)/', $line, $matches2)) {
+                            $lang = "";
+                            if (is_readable(APP_ROOT.'/data/languages.ini') && ($langdata = @parse_ini_file(APP_ROOT.'/data/languages.ini', true))) {
+                                if (isset($langdata['Linux']['_'.$matches2[1]])) {
+                                    $lang = $langdata['Linux']['_'.$matches2[1]];
+                                }
+                            }
+                            if ($lang == "") {
+                                $lang = 'Unknown';
+                            }
+                            define('PSI_SYSTEM_LANG', $lang.' ('.$matches2[1].')');
+                            break;
+                        }
+                    }
+                }
+            }
+        } elseif (PHP_OS == 'Haiku') {
+            if (!(defined('PSI_SYSTEM_CODEPAGE') && defined('PSI_SYSTEM_LANG')) //also if both not overloaded in phpsysinfo.ini
+                && @exec('locale -m 2>/dev/null', $lines)) {
+                foreach ($lines as $line) {
+                    if (preg_match('/^"?([^\."]*)\.?([^"]*)/', $line, $matches2)) {
 
-// show mount point
-// true = show mount point
-// false = do not show mount point
-$show_mount_point = true;
+                        if (!defined('PSI_SYSTEM_CODEPAGE') && isset($matches2[2]) && !is_null($matches2[2]) && (trim($matches2[2]) != "") ) { //also if not overloaded in phpsysinfo.ini
+                            define('PSI_SYSTEM_CODEPAGE', $matches2[2]);
+                        }
 
-// show bind
-// true = display filesystems mounted with the bind options under Linux
-// false = hide them
-$show_bind = false;
+                        if (!defined('PSI_SYSTEM_LANG')) { //if not overloaded in phpsysinfo.ini
+                            $lang = "";
+                            if (is_readable(APP_ROOT.'/data/languages.ini') && ($langdata = @parse_ini_file(APP_ROOT.'/data/languages.ini', true))) {
+                                if (isset($langdata['Linux']['_'.$matches2[1]])) {
+                                    $lang = $langdata['Linux']['_'.$matches2[1]];
+                                }
+                            }
+                            if ($lang == "") {
+                                $lang = 'Unknown';
+                            }
+                            define('PSI_SYSTEM_LANG', $lang.' ('.$matches2[1].')');
+                        }
+                        break;
+                    }
+                }
+            }
+        } elseif (PHP_OS == 'Darwin') {
+            if (!defined('PSI_SYSTEM_LANG') //if not overloaded in phpsysinfo.ini
+                && @exec('defaults read /Library/Preferences/.GlobalPreferences AppleLocale 2>/dev/null', $lines)) {
+                $lang = "";
+                if (is_readable(APP_ROOT.'/data/languages.ini') && ($langdata = @parse_ini_file(APP_ROOT.'/data/languages.ini', true))) {
+                    if (isset($langdata['Linux']['_'.$lines[0]])) {
+                        $lang = $langdata['Linux']['_'.$lines[0]];
+                    }
+                }
+                if ($lang == "") {
+                    $lang = 'Unknown';
+                }
+                define('PSI_SYSTEM_LANG', $lang.' ('.$lines[0].')');
+            }
+        }
+    }
 
-// show inode usage
-// true = display used inodes in percent
-// false = hide them
-$show_inodes = true;
+    if (!defined('PSI_OS')) {
+        define('PSI_OS', PHP_OS);
+    }
 
-// Hide mount(s). Example:
-// $hide_mounts = array( '/home', '/dev' );
-$hide_mounts = array();
+    if (!defined('PSI_SYSTEM_LANG')) {
+        define('PSI_SYSTEM_LANG', null);
+    }
+    if (!defined('PSI_SYSTEM_CODEPAGE')) { //if not overloaded in phpsysinfo.ini
+        if ((PSI_OS=='Android') || (PSI_OS=='Darwin')) {
+            define('PSI_SYSTEM_CODEPAGE', 'UTF-8');
+        } elseif (PSI_OS=='Minix') {
+            define('PSI_SYSTEM_CODEPAGE', 'CP437');
+        } else {
+            define('PSI_SYSTEM_CODEPAGE', null);
+        }
+    }
 
-// Hide filesystem typess. Example:
-// $hide_fstypes = array( 'tmpfs', 'usbfs' );
-$hide_fstypes = array();
+    /* restore error level */
+    error_reporting($old_err_rep);
 
-// if the hddtemp program is available we can read the temperature, if hdd is smart capable
-// !!ATTENTION!! hddtemp might be a security issue
-// $hddtemp_avail = "tcp";	// read data from hddtemp deamon (localhost:7634)
-// $hddtemp_avail = "suid";     // read data from hddtemp programm (must be set suid)
-
-// show a graph for current cpuload
-// true = displayed, but it's a performance hit (because we have to wait to get a value, 1 second)
-// false = will not be displayed
-$loadbar = false;
-
-// additional paths where to look for installed programs
-// e.g. $addpaths = array('/opt/bin', '/opt/sbin');
-$addpaths = array();
-
-// display error messages at the top of the page
-// $showerrors = true;          // show the errors
-// $showerrors = false;         // don't show the errors
-$showerrors = true;
-
-// format in which temperature is displayed
-// $temperatureformat = "c";	// shown in celsius
-// $temperatureformat = "f";	// shown in fahrenheit
-// $temperatureformat = "c-f";	// both shown first celsius and fahrenheit in braces
-// $temperatureformat = "f-c";	// both shown first fahrenheit and celsius in braces
-$temperatureformat = "c";
-
-?>
+    /* restore error handler */
+    if (function_exists('errorHandlerPsi')) {
+        set_error_handler('errorHandlerPsi');
+    }
+}
