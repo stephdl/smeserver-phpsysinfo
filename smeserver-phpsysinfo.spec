@@ -5,7 +5,7 @@
 Summary: phpSysInfo for SME Server
 %define name smeserver-phpsysinfo
 Name: %{name}
-%define version 3.1.13
+%define version 3.2.3
 %define release 1
 Version: %{version}
 Release: %{release}%{?dist}
@@ -16,6 +16,7 @@ URL: http://phpsysinfo.sourceforge.net
 BuildRoot: /var/tmp/%{name}-%{version}-%{release}-buildroot
 BuildArchitectures: noarch
 Requires: smeserver-release >= 9.0
+Requires: hddtemp lm_sensors
 BuildRequires: e-smith-devtools 
 AutoReqProv: no
 
@@ -24,6 +25,10 @@ AutoReqProv: no
 Access with admin login credentials via https://yourdomain/phpsysinfo
 
 %changelog
+* Wed Sep 22 2015 stephane de Labrusse <stephdl@de-labrusse.fr> 3.2.3-1.sme
+- Upgrade to upstream 3.2.3
+- Require hddtemp lm_sensors
+
 * Sat Jun 21 2014 stephane de Labrusse <stephdl@de-labrusse.fr> 3.1.13-1.sme
 - Initial release to sme9
 - upgrade of phpsysinfo to 3.1.13 https://github.com/phpsysinfo/phpsysinfo/releases/tag/v3.1.13
